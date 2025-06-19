@@ -1,0 +1,52 @@
+﻿@page "/view-article/{Id:int}"
+@using WikiShared.DTOs.Article
+@using WikiShared.Interfaces
+@inject IArticleService ArticleService
+@inject NavigationManager Nav
+
+<h2>Visualización del artículo</h2>
+
+@if (article == null)
+{
+    <p>Cargando artículo...</p>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title fw-bold">@article.Title</h3>
+            <br />
+            <h5 class="card-subtitle">Creado por: @article.CreatedByUser</h5>
+            <br />
+            <hr />
+            <br />
+            <div class="card-text">
+                @((MarkupString)article.Description)
+            </div>
+            <br />
+            <hr />
+            @if (article.Keywords != null && article.Keywords.Any())
+            {
+                <p><strong>Palabras clave:</strong></p>
+                <ul>
+                    @foreach (var k in article.Keywords)
+                    {
+                        <li>@k</li>
+                    }
+                </ul>
+            }
+
+            <button class="btn btn-secondary" @onclick="@(() => Nav.NavigateTo("/articles"))">Volver</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private ArticleDto? article;
+
+    protected override async Task OnInitializedAsync()
+    {
+        article = await ArticleService.GetByIdAsync(Id);
+    }
+}

@@ -1,0 +1,129 @@
+﻿@page "/keywords"
+@using WikiShared.DTOs.Keyword
+@using WikiShared.Interfaces
+@inject IKeywordService KeywordService
+@inject NavigationManager Nav
+
+<h3>Keywords</h3>
+
+@if (showForm)
+{
+        <EditKeyword Id="@editingId" OnSave="OnSaved" />
+}
+else
+{
+    <input class="form-control mb-3" placeholder="Buscar keywords..." value="@searchQuery" @oninput="OnSearchChanged" />
+    <br />
+    <button class="btn btn-primary mb-2" @onclick="Nuevo">Nueva keyword</button>
+
+    @if (keywords == null)
+    {
+                <p>Cargando...</p>
+    }
+    else if (keywords.Count == 0)
+    {
+                <p>No hay keywords.</p>
+    }
+    else
+    {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                @foreach (var k in keywords)
+                {
+                                <tr>
+                                    <td>@k.Name</td>
+                                    <td>@k.Description</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" @onclick="() => Edit(k.Id)">Editar</button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => Delete(k.Id)">Eliminar</button>
+                                    </td>
+                                </tr>
+                }
+                    </tbody>
+                </table>
+    }
+}
+
+<ConfirmDialog @ref="confirmDialog" />
+
+@code {
+    private List<KeywordDto>? keywords;
+    private bool showForm = false;
+    private int editingId = 0;
+    private ConfirmDialog? confirmDialog;
+    private string searchQuery = "";
+    private List<KeywordDto> allKeywords = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadKeywords();
+    }
+
+    private async Task LoadKeywords()
+    {
+        allKeywords = await KeywordService.GetAllAsync();
+        await RefreshKeywordsAsync();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        await RefreshKeywordsAsync();
+    }
+
+    private Task RefreshKeywordsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            keywords = allKeywords;
+        }
+        else
+        {
+            var query = searchQuery.ToLower();
+            keywords = allKeywords
+                .Where(k => k.Name.ToLower().Contains(query) || (k.Description?.ToLower().Contains(query) ?? false))
+                .ToList();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void Nuevo()
+    {
+        editingId = 0;
+        showForm = true;
+    }
+
+    private void Edit(int id)
+    {
+        editingId = id;
+        showForm = true;
+    }
+
+    private async Task Delete(int id)
+    {
+        if (confirmDialog is null)
+            return;
+
+        bool confirmed = await confirmDialog.Show("¿Seguro que querés eliminar esta keyword?");
+        if (confirmed)
+        {
+            await KeywordService.DeleteAsync(id);
+            await LoadKeywords();
+        }
+    }
+
+    private async Task OnSaved()
+    {
+        showForm = false;
+        editingId = 0;
+        await LoadKeywords();
+    }
+}

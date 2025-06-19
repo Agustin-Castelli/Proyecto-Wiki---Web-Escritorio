@@ -1,0 +1,114 @@
+﻿@page "/articles"
+@using WikiShared.DTOs.Article
+@using WikiShared.Interfaces
+@inject IArticleService ArticleService
+@inject NavigationManager Nav
+
+<h3>Artículos</h3>
+<style>
+    .disabled-button {
+        pointer-events: none; /* bloquea clicks */
+        opacity: 0.6; /* apariencia desactivada */
+        cursor: not-allowed; /* cursor cruzado */
+    }
+</style>
+
+<div class="mb-3">
+    <input class="form-control" placeholder="Buscar artículos..." value="@searchQuery" @oninput="OnSearchChanged" />
+</div>
+
+<button class="btn btn-secondary disabled-button" aria-disabled="true" title="🔒 Funcionalidad no disponible en la versión de escritorio.">
+    🔒 Nuevo artículo
+</button>
+
+@if (articles is null)
+{
+    <p>Cargando artículos...</p>
+}
+else if (!articles.Any())
+{
+    <p>No hay artículos.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Creado por</th>
+                <th>Palabras clave</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in articles)
+            {
+                <tr>
+                    <td>@a.Title</td>
+                    <td>@a.CreatedByUser</td>
+                    <td>
+                        @if (a.Keywords?.Any() == true)
+                        {
+                            <ul>
+                                @foreach (var keyword in a.Keywords)
+                                {
+                                    <li>@keyword</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <em>Sin keywords</em>
+                        }
+                    </td>
+                    <td>
+                        <button @onclick="@(() => Nav.NavigateTo($"/view-article/{a.Id}"))">Ver</button>
+                        <button @onclick="() => ConfirmDelete(a.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ConfirmDialog @ref="confirmDialog" />
+
+
+@code {
+    private List<ArticleDto>? articles;
+    private ConfirmDialog? confirmDialog;
+    private string searchQuery = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = await ArticleService.GetAllAsync();
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        if (confirmDialog is null)
+            return;
+
+        bool confirmed = await confirmDialog.Show("¿Seguro que querés eliminar este artículo?");
+
+        if (confirmed)
+        {
+            await ArticleService.DeleteAsync(id);
+            articles = await ArticleService.GetAllAsync();
+        }
+    }
+
+    private async Task RefreshArticlesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+            articles = await ArticleService.GetAllAsync();
+        else
+            articles = await ArticleService.SearchAsync(searchQuery);
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        await RefreshArticlesAsync();
+    }
+}

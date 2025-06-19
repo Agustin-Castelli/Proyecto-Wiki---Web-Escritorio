@@ -1,0 +1,116 @@
+﻿@page "/articles"
+@rendermode InteractiveServer
+@using WikiShared.DTOs.Article
+@using WikiShared.Interfaces
+@inject IArticleService ArticleService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<h3>Artículos</h3>
+
+<div class="mb-3">
+    <input class="form-control" placeholder="Buscar artículos..." value="@searchQuery" @oninput="OnSearchChanged" />
+</div>
+
+<button class="btn btn-primary mb-3" @onclick="@(() => Nav.NavigateTo("/edit-article"))">Nuevo artículo</button>
+
+@if (articles is null)
+{
+    <p>Cargando artículos...</p>
+}
+else if (!articles.Any())
+{
+    <p>No hay artículos.</p>
+}
+else
+{
+    @* TODO: Mover este estilo a un archivo .razor.css cuando Blazor lo respete *@
+    <style>
+        .clickable-row:hover td {
+            background-color: darkgray;
+            cursor: pointer;
+        }
+    </style>
+
+
+    <table class="article-table table">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Creado por</th>
+                <th>Palabras clave</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in articles)
+            {
+                <tr class="clickable-row" @onclick="@(() => Nav.NavigateTo($"/view-article/{a.Id}"))">
+                    <td class="fw-bold">@a.Title</td>
+                    <td>@a.CreatedByUser</td>
+                    <td>
+                        @if (a.Keywords?.Any() == true)
+                        {
+                            <ul class="keyword-list">
+                                @foreach (var keyword in a.Keywords)
+                                {
+                                    <li class="keyword-tag">@keyword</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <em>Sin keywords</em>
+                        }
+                    </td>
+                    <td @onclick:stopPropagation>
+                        <button class="btn btn-sm btn-warning me-1" @onclick="@(() => Nav.NavigateTo($"/edit-article/{a.Id}"))">Editar</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(a.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+
+@code {
+    private List<ArticleDto>? articles;
+    private string searchQuery = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = await ArticleService.GetAllAsync();
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        try
+        {
+            var confirmed = await JS.InvokeAsync<bool>("confirm", "¿Seguro que querés eliminar?");
+            if (confirmed)
+            {
+                await ArticleService.DeleteAsync(id);
+                await RefreshArticlesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Delete Error] {ex.Message}");
+        }
+    }
+
+    private async Task RefreshArticlesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+            articles = await ArticleService.GetAllAsync();
+        else
+            articles = await ArticleService.SearchAsync(searchQuery);
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        await RefreshArticlesAsync();
+    }
+}

@@ -1,0 +1,48 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build results
+**/bin/
+**/obj/
+
+# Rider
+.idea/
+
+# User-specific files
+*.userosscache
+*.sln.docstates
+
+# MAUI / Android specific
+*.apk
+*.aab
+*.keystore
+*.DS_Store
+
+# Log files
+*.log
+
+# Auto-generated files
+*.dbmdl
+*.dbproj.schemaview
+*.pdb
+*.cache
+*.pidb
+*.svclog
+
+# Mac/Linux generated files
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+
+# Node modules (in case you add NPM packages for frontend)
+node_modules/
+
+# Publish folders (optional: uncomment if you publish locally before deploying)
+# **/publish/
+
+# User secrets and local config
+secrets.json
+appsettings.Development.json

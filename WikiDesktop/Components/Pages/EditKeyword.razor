@@ -1,0 +1,70 @@
+﻿@page "/edit-keyword"
+@page "/edit-keyword/{Id:int}"
+@using WikiShared.DTOs.Keyword
+@using WikiShared.Interfaces
+@inject IKeywordService KeywordService
+@inject NavigationManager Nav
+
+<h3>@(Id == 0 ? "Nueva Keyword" : "Editar Keyword")</h3>
+
+<EditForm Model="form" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Nombre:</label>
+        <InputText @bind-Value="form.Name" class="form-control" />
+
+        <label>Descripción:</label>
+        <InputText @bind-Value="form.Description" class="form-control" />
+    </div>
+
+    <button class="btn btn-success" type="submit">Guardar</button>
+</EditForm>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    private UpdateKeywordDto form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != 0)
+        {
+            var existing = await KeywordService.GetByIdAsync(Id);
+            if (existing is not null)
+            {
+                form.Id = Id;
+                form.Name = existing.Name;
+                form.Description = existing.Description;
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (Id == 0)
+        {
+            await KeywordService.CreateAsync(new CreateKeywordDto
+                {
+                    Name = form.Name,
+                    Description = form.Description
+                });
+        }
+        else
+        {
+            await KeywordService.UpdateAsync(form);
+        }
+
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync(null);
+        }
+        else
+        {
+            Nav.NavigateTo("/keywords");
+        }
+    }
+}
